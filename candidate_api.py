@@ -14,12 +14,10 @@ def hello():
 @app.route('/candidates', methods=['GET'])
 def get_candidates():
     #param_dict = defaultdict(lambda: None, request.args)
-    query_fields = [(q, request.args[q]) for q in query_params if request.args.has_key(q)]
+    query_fields = [(q, request.args[q]) for q in query_params if request.args.has_key(q) and request.args[q] != '' and '%' not in request.args[q]]
 #    query_fields = [param_dict[q] for q in query_params if param_dict[q]]
     if len(query_fields) == 0:
         return 'Please provide some query parameters'
-    if any('%' in v or v == '' for q,v in query_fields):
-        return "Please don't insert wildcards or blanks in your queries"
     print query_fields
     try:
         results = query_candidates(query_fields)
@@ -28,6 +26,9 @@ def get_candidates():
     return json.dumps(results)
 #return str(query_fields)
 
+@app.route('/reload', methods=['POST'])
+def reload_candidates():
+    return 'hi!'
 
 if __name__ == "__main__":
     app.run()

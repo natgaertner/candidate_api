@@ -2,6 +2,7 @@
 from cStringIO import StringIO
 import psycopg2.psycopg1 as psycopg
 import re, imp, csv, sys, time
+from utffile import utffile
 
 def parse_config(config_file):
     with open(config_file, 'r') as cf:
@@ -34,7 +35,7 @@ def parse_config(config_file):
     return universal_config_dict, table_config_dict
 
 def new_process_config(universal_config):
-    universal_config_dict = {'reformat_path':None, 'debug': False}
+    universal_config_dict = {'reformat_path':None, 'debug': False, 'use_utf': False}
     table_config_dict = defaultdict(lambda: {'copy_every':100000, 'format':'csv','field_sep':',','quotechar':'"'})
     universal_config_dict.update(universal_config)
     for t in universal_config_dict['tables']:
@@ -100,20 +101,14 @@ def process_table(table_conf, univ_conf, connection):
     quote_char = table_conf['quotechar']
     copy_every = int(table_conf['copy_every'])
     cursor = connection.cursor()
-    with open(table_conf['filename'], 'rb') as f:
+    with utffile(table_conf['filename'],'rb') if univ_conf['use_utf'] else open(table_conf['filename'], 'rb') as f:
         buf = StringIO()
         csvr = csv.reader(f, quotechar=quote_char)
         csvw = csv.writer(buf, quotechar=quote_char,delimiter=field_sep)
         if table_conf.has_key('skip_head_lines'):
             shl = int(table_conf['skip_head_lines'])
             for i in range(shl):
-                try:
-                    csvr.next()
-                except Exception, error:
-                    if univ_conf['debug']:
-                        import pdb; pdb.set_trace()
-                    else:
-                        raise error
+                csvr.next()
         x = 0
         ptime = 0
         ctime = 0

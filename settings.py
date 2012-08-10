@@ -5,7 +5,7 @@ DATABASE_CONF={
     'pw':'expcand'
     }
 STATE_FIELD = 'state'
-STATE_DIR = '/home/gaertner/code/candidateview/candidate_files/trimmed'
+STATE_DIR = '/home/gaertner/Dropbox/BIP Production'
 
 CANDIDATE_TABLE = {
         'skip_head_lines':1,
@@ -35,7 +35,7 @@ CANDIDATE_TABLE = {
             'youtube':18
             }
         }
-ERSATZPG_CONFIG = {'debug':True}
+ERSATZPG_CONFIG = {'debug':True, 'use_utf':True}
 ERSATZPG_CONFIG.update(DATABASE_CONF)
 ERSATZPG_CONFIG.update({
     'tables':{
@@ -57,7 +57,7 @@ CANDIDATE_FIELDS=OrderedDict([
     ('phone','varchar(100)'),
     ('mailing_address','varchar(255)'),
     ('website','text'),
-    ('email','varchar(50)'),
+    ('email','varchar(100)'),
     ('facebook_url','text'),
     ('twitter_name','varchar(20)'),
     ('google_plus','text'),

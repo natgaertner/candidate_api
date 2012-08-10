@@ -45,9 +45,9 @@ def create_state_tables(states, connection):
     master = 'CREATE TABLE candidates (id int4 DEFAULT nextval(\'pksq\'),'
     master+=','.join('{name} {type}'.format(name=k,type=v) for k,v in settings.CANDIDATE_FIELDS.iteritems())
     master += ');'
-    children = ''.join('CREATE TABLE candidates_{state} (CHECK ({state_field} ~* \'{state}\')) INHERITS (candidates);'.format(state=s,state_field=settings.STATE_FIELD) for s in states)
+    children = ''.join('CREATE TABLE candidates_{state} (CHECK (trim({state_field}) ~* \'{state}\')) INHERITS (candidates);'.format(state=s,state_field=settings.STATE_FIELD) for s in states)
     trigger = 'CREATE TRIGGER insert_candidate_trigger BEFORE INSERT on candidates FOR EACH ROW EXECUTE PROCEDURE candidate_insert_trigger();'
-    function = 'CREATE OR REPLACE FUNCTION candidate_insert_trigger() RETURNS TRIGGER AS $$ BEGIN IF '+ ' ELSEIF '.join('NEW.{state_field} ~* \'{state}\' THEN INSERT INTO candidates_{state} VALUES (NEW.*);'.format(state=s, state_field=settings.STATE_FIELD) for s in states) + ' ELSE RAISE EXCEPTION \'NO SUCH STATE IN DATABASE\'; END IF; RETURN NULL; END; $$ LANGUAGE plpgsql;'
+    function = 'CREATE OR REPLACE FUNCTION candidate_insert_trigger() RETURNS TRIGGER AS $$ BEGIN IF '+ ' ELSEIF '.join('trim(NEW.{state_field}) ~* \'{state}\' THEN INSERT INTO candidates_{state} VALUES (NEW.*);'.format(state=s, state_field=settings.STATE_FIELD) for s in states) + ' ELSE RAISE EXCEPTION \'NO SUCH STATE IN DATABASE\'; END IF; RETURN NULL; END; $$ LANGUAGE plpgsql;'
     cur = connection.cursor()
 #    cur.execute('BEGIN;')
     cur.execute(seq)
