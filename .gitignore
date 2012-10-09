@@ -6,3 +6,6 @@ candidate_files
 *.pyc
 *.swp
 *~
+adb.py
+tablesorter/
+pwsettings.py
