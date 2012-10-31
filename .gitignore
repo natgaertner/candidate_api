@@ -9,3 +9,12 @@ candidate_files
 adb.py
 tablesorter/
 pwsettings.py
+auth_tuples.py
+authdb.py
+basic_auth.py
+*.csv
+*.bkp
+*.json
+data/
+pgloader_stripped/
+ersatzpg/

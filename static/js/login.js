@@ -1,6 +1,7 @@
 $(document).ready(function(){
 	$.ajax({
-		url: "https://50.116.48.233/list/isloggedin",
+		//url: "https://50.116.48.233/list/isloggedin",
+		url: "/list/isloggedin",
 		success: function(data){
 			if(data=='1'){
 				//fetchlist();
@@ -24,7 +25,8 @@ $(document).ready(function(){
 		$("#logindiv").append('<div class="span12"><a id="logout_button" class="btn btn-primary">LOGOUT</a></div>');
 		$('#logout_button').click(function(){
 			$.ajax({
-				url: "https://50.116.48.233/list/logout",
+				//url: "https://50.116.48.233/list/logout",
+				url: "/list/logout",
 				success: function(data){
 					$("#addbody").empty();
 					fetchloginform();
@@ -37,7 +39,8 @@ $(document).ready(function(){
 
 	function unactivated_login(){
 		$.ajax({
-			url: "https://50.116.48.233/list/loginform",
+			//url: "https://50.116.48.233/list/loginform",
+			url: "/list/loginform",
 			success: function(data){
 				loginform = $("#loginformdiv");
 				loginform.empty();
@@ -56,7 +59,8 @@ $(document).ready(function(){
 		var uname = $('input[name=username]').val();
 		var pw = $('input[name=password]').val();
 		$.ajax({
-			url: "https://50.116.48.233/list/login",
+			//url: "https://50.116.48.233/list/login",
+			url: "/list/login",
 			data: {username:uname,password:pw},
 			contentType: "application/json",
 			dataType: "json",
@@ -80,7 +84,8 @@ $(document).ready(function(){
 	}
 	function unactivated_signup(){
 		$.ajax({
-			url: "https://50.116.48.233/list/signupform",
+			//url: "https://50.116.48.233/list/signupform",
+			url: "/list/signupform",
 			success: function(data){
 				loginform = $("#loginformdiv");
 				loginform.empty();
@@ -122,8 +127,9 @@ $(document).ready(function(){
 			return 0;
 		}
 		$.ajax({
-			url: "https://50.116.48.233/list/signup",
-			data: {username:uname,password:pw,password2:pwr,firstname:fname,lastname:lname,email:email,organization:org},
+			//url: "https://50.116.48.233/list/signup",
+			url: "/list/signup",
+			data: {username:uname,password:pw,password2:pwr,firstname:fname,lastname:lname,email:email,organization:org,agreed:agree},
 			contentType: "application/json",
 			dataType: "json",
 			type: "POST",
@@ -153,7 +159,8 @@ $(document).ready(function(){
 		});
 	}
 	function isfile(){
-		var url = 'https://50.116.48.233/list/is_file/' + window.location.href.split('/list')[1].replace(/^\//,'');
+		//var url = 'https://50.116.48.233/list/is_file/' + window.location.href.split('/list')[1].replace(/^\//,'');
+		var url = '/list/is_file/' + window.location.href.split('/list')[1].replace(/^\//,'');
 		$.ajax({
 			url: url,
 			success: function(data){
@@ -167,7 +174,8 @@ $(document).ready(function(){
 				}
 				else{
 					$.ajax({
-						url: 'https://50.116.48.233/list/api_dir/' + path,
+						//url: 'https://50.116.48.233/list/api_dir/' + path,
+						url: '/list/api_dir/' + path,
 						success: function(data){
 							$('#addbody').append(data);
 						},

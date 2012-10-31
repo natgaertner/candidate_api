@@ -219,9 +219,10 @@ def get_candidates():
     return json.dumps(results)
 
 bip_query_params = {
-        'candidate':('filed_mailing_address','election_key','name','phone','mailing_address','facebook_url','youtube','email','candidate_url','source','google_plus_url','twitter_name','incumbent','party','wiki_word','biography','photo_url',),
-        'contest':('number_voting_for','election_key','office','filing_closed_date','type','electoral_district_type','number_elected','custom_ballot_heading','contest_type','electorate_specifications','write_in','source','state','electoral_district_name','ballot_placement','partisan','primary_party','special',),
-        'electoral_district':('election_key','name','number','source','state_id','type'),
+        'candidate':('filed_mailing_address','election_key','name','phone','mailing_address','facebook_url','youtube','email','candidate_url','source','google_plus_url','twitter_name','incumbent','party','wiki_word','biography','photo_url','identifier','updated',),
+        'contest':('number_voting_for','election_key','office','filing_closed_date','type','electoral_district_type','number_elected','custom_ballot_heading','contest_type','electorate_specifications','write_in','source','state','electoral_district_name','ballot_placement','partisan','primary_party','special','identifier','updated',),
+        'electoral_district':('election_key','name','number','source','state_id','type','identifier','updated',),
+        'referendum':("id","source","title","subtitle","brief","text","pro_statement","con_statement","contest_id","passage_threshold","effect_of_abstain","election_key","updated","identifier"),
         }
 
 @app.route('/bip/<path:table>', methods=['GET', 'POST'])

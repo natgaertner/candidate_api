@@ -172,50 +172,92 @@ def query_candidates(query_fields):
     return cur.fetchall()
 
 def query_bip(table, query_fields):
+    u = query_fields.pop('updated',None)
+    day_format = '%Y-%m-%d'
+    time_format = '%H-%M-%S'
+    updated_query = []
+    if u != None:
+        if u == 'notnull':
+            updated_query = 'updated is not null'
+        elif u.lower() == 'null':
+            updated_query = 'updated is null'
+        else:
+            try:
+                d = datetime.strptime(u,day_format)
+            except:
+                d = datetime.strptime(u,day_format+'T'+time_format)
+            t = psycopg.Timestamp(d.year,d.month,d.day,d.hour,d.minute,d.second).getquoted()
+            updated_query = 'updated > {t}'.format(t=t)
+        updated_query = [updated_query]
     fields = OrderedDict(settings.__dict__['BIP_{table}_FIELDS'.format(table=table.upper())])
     fields = ','.join((k if not v=='timestamp' else "to_char({k}, 'YYYY-MM-DD HH24:MI:SS') as {k}".format(k=k)) for k,v in fields.iteritems())
-    sql = 'SELECT {fields} from {table} where '.format(fields=fields,table=table) + ' and '.join(["{0} ilike '%{1}%'".format(k,v) for (k,v) in query_fields.iteritems()]) + ';'
+    sql = 'SELECT {fields} from {table} where '.format(fields=fields,table=table) + ' and '.join(["{0} ilike '%{1}%'".format(k,v) for (k,v) in query_fields.iteritems()] + updated_query) + ';'
     print sql
     connection = db_connect(settings.BIP_DATABASE_CONF)
     cur = connection.cursor(cursor_factory=psyex.RealDictCursor)
     cur.execute(sql)
     return cur.fetchall()
 
-electoraldistrict_fields = 'election_key,name,number,source,state_id,type,id'.split(',')
-contest_fields = 'number_voting_for,election_key,electoral_district_id,office,filing_closed_date,type,electoral_district_type,number_elected,custom_ballot_heading,contest_type,electorate_specifications,write_in,source,state,electoral_district_name,ballot_placement,partisan,primary_party,election_id,id,special'.split(',')
-candidate_fields = 'filed_mailing_address,election_key,name,phone,mailing_address,facebook_url,youtube,email,candidate_url,source,google_plus_url,twitter_name,incumbent,party,wiki_word,id,biography,photo_url'.split(',')
-ed_fields = ','.join('ed.{f} as ed_{f}'.format(f=f) for f in electoraldistrict_fields)
-ca_fields = ','.join('ca.{f} as ca_{f}'.format(f=f) for f in candidate_fields)
-co_fields = ','.join('co.{f} as co_{f}'.format(f=f) for f in contest_fields)
+electoraldistrict_fields = 'election_key,name,number,source,state_id,type,id,identifier,updated'.split(',')
+contest_fields = 'number_voting_for,election_key,electoral_district_id,office,filing_closed_date,type,electoral_district_type,number_elected,custom_ballot_heading,contest_type,electorate_specifications,write_in,source,state,electoral_district_name,ballot_placement,partisan,primary_party,election_id,id,special,identifier,updated'.split(',')
+candidate_fields = 'filed_mailing_address,election_key,name,phone,mailing_address,facebook_url,youtube,email,candidate_url,source,google_plus_url,twitter_name,incumbent,party,wiki_word,id,biography,photo_url,identifier,updated'.split(',')
+#ed_fields = ','.join('ed.{f} as ed_{f}'.format(f=f) for f in electoraldistrict_fields)
+#ca_fields = ','.join('ca.{f} as ca_{f}'.format(f=f) for f in candidate_fields)
+#co_fields = ','.join('co.{f} as co_{f}'.format(f=f) for f in contest_fields)
 
 def query_merged_bip(query_fields):
-    #fields = OrderedDict(settings.CANDIDATE_FIELDS)
-    #fields = ','.join((k if not v=='timestamp' else "to_char({k}, 'YYYY-MM-DD HH24:MI:SS') as {k}".format(k=k)) for k,v in fields.iteritems())
+    day_format = '%Y-%m-%d'
+    time_format = '%H-%M-%S'
+    updated_queries = defaultdict(lambda:[])
+    for table in ['candidate','contest','electoral_district']:
+        u = query_fields.pop(table+'.updated',None)
+        if u != None:
+            if u == 'notnull':
+                updated_query = 'updated is not null'
+            elif u.lower() == 'null':
+                updated_query = 'updated is null'
+            else:
+                try:
+                    d = datetime.strptime(u,day_format)
+                except:
+                    d = datetime.strptime(u,day_format+'T'+time_format)
+                t = psycopg.Timestamp(d.year,d.month,d.day,d.hour,d.minute,d.second).getquoted()
+                updated_query = table+'.updated > {t}'.format(t=t)
+            updated_queries[table] = [updated_query]
     table_query_fields = defaultdict(lambda:{})
     where_dict = defaultdict(lambda:'')
     for k,v in query_fields.iteritems():
         table_query_fields[k[:k.index('.')]].update({k:v})
         where_dict[k[:k.index('.')]] = ' where '
-    sql = 'SELECT {ca_fields},{co_fields},{ed_fields}'.format(ca_fields=ca_fields, co_fields=co_fields,ed_fields=ed_fields) + ' from (select * from contest' + where_dict['contest'] + ' and '.join(["{0} ilike '%{1}%'".format(k,v) for k,v in table_query_fields['contest'].iteritems()])
-    sql += ') as co join candidate_in_contest as cic on co.id = cic.contest_id join (select * from candidate' + where_dict['candidate'] + ' and '.join(["{0} ilike '%{1}%'".format(k,v) for k,v in table_query_fields['candidate'].iteritems()]) 
-    sql += ') as ca on cic.candidate_id = ca.id join (select * from electoral_district' + where_dict['electoral_district'] + ' and '.join(["{0} ilike '%{1}%'".format(k,v) for k,v in table_query_fields['electoral_district'].iteritems()]) + ') as ed on co.electoral_district_id = ed.id;'
+    ca_fields = OrderedDict(settings.__dict__['BIP_CANDIDATE_FIELDS'.format(table=table.upper())])
+    ca_fields = ','.join(('ca.'+k+' as ca_'+k if not v=='timestamp' else "to_char(ca.{k}, 'YYYY-MM-DD HH24:MI:SS') as ca_{k}".format(k=k)) for k,v in ca_fields.iteritems())
+    co_fields = OrderedDict(settings.__dict__['BIP_CONTEST_FIELDS'.format(table=table.upper())])
+    co_fields = ','.join(('co.'+k+' as co_'+k if not v=='timestamp' else "to_char(co.{k}, 'YYYY-MM-DD HH24:MI:SS') as co_{k}".format(k=k)) for k,v in co_fields.iteritems())
+    ed_fields = OrderedDict(settings.__dict__['BIP_ELECTORAL_DISTRICT_FIELDS'.format(table=table.upper())])
+    ed_fields = ','.join(('ed.'+k+' as ed_'+k if not v=='timestamp' else "to_char(ed.{k}, 'YYYY-MM-DD HH24:MI:SS') as ed_{k}".format(k=k)) for k,v in ed_fields.iteritems())
+    sql = 'SELECT {ca_fields},{co_fields},{ed_fields}'.format(ca_fields=ca_fields, co_fields=co_fields,ed_fields=ed_fields) + ' from (select * from contest' + where_dict['contest'] + ' and '.join(["{0} ilike '%{1}%'".format(k,v) for k,v in table_query_fields['contest'].iteritems()] + updated_queries['contest'])
+    sql += ') as co join candidate_in_contest as cic on co.id = cic.contest_id join (select * from candidate' + where_dict['candidate'] + ' and '.join(["{0} ilike '%{1}%'".format(k,v) for k,v in table_query_fields['candidate'].iteritems()] + updated_queries['candidate']) 
+    sql += ') as ca on cic.candidate_id = ca.id join (select * from electoral_district' + where_dict['electoral_district'] + ' and '.join(["{0} ilike '%{1}%'".format(k,v) for k,v in table_query_fields['electoral_district'].iteritems()] + updated_queries['electoral_district']) + ') as ed on co.electoral_district_id = ed.id;'
     print sql
     connection = db_connect(settings.BIP_DATABASE_CONF)
     cur = connection.cursor(cursor_factory=psyex.RealDictCursor)
     cur.execute(sql)
     return cur.fetchall()
 
-def dump_json():
+def dump_json(nulls=False):
     connection = db_connect(settings.BIP_DATABASE_CONF)
     cur = connection.cursor(cursor_factory=psyex.RealDictCursor)
-    for table in ['candidate','contest','candidate_in_contest','electoral_district']:
+    for table in ['candidate','contest','candidate_in_contest','electoral_district','referendum','ballot_response']:
         fields = OrderedDict(settings.__dict__['BIP_{table}_FIELDS'.format(table=table.upper())])
         fields = ','.join((k if not v=='timestamp' else "to_char({k}, 'YYYY-MM-DD HH24:MI:SS') as {k}".format(k=k)) for k,v in fields.iteritems())
         sql = 'SELECT {fields} from {table};'.format(fields=fields,table=table) 
         print sql
         cur.execute(sql)
         with open(table+'.json','w') as f:
-            f.write(json.dumps(cur.fetchall()))
+            if nulls:
+                f.write(json.dumps(cur.fetchall()))
+            else:
+                f.write(json.dumps(map(lambda d: dict((k,v) for k,v in d.iteritems() if v != None),cur.fetchall())))
 
 
 if __name__=='__main__':
