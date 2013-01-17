@@ -14,7 +14,7 @@ app.secret_key = pwsettings.secret_key
 
 query_params = ['state','office_level','electoral_district','office_name','candidate_name','candidate_party','updated']
 
-connstr = "dbname=users user=postgres password=n/o.n,e"
+connstr = "dbname=users user=postgres password="+pwsettings.password
 connection = psycopg.connect(connstr)
 
 @app.route('/isloggedin')
