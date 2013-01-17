@@ -5,11 +5,12 @@ from flask import request, session, redirect,url_for, render_template
 from flaskext.autoindex import AutoIndex
 from sql_utils import query_candidates, test_database, build_database, query_bip, query_merged_bip
 import basic_auth
+import pwsettings
 import psycopg2 as psycopg
 from psycopg2.extensions import QuotedString
 app = Flask(__name__)
 ai = AutoIndex(app, browse_root='/home/gaertner/Dropbox/BIP Production')
-app.secret_key = '\xe9\x83\x88v\x97\x16\xe1\x06r\xa3+\xd0W\xfb\xea\xa4L\x06LW\xe0\xca\xff\x8a'
+app.secret_key = pwsettings.secret_key
 
 query_params = ['state','office_level','electoral_district','office_name','candidate_name','candidate_party','updated']
 
