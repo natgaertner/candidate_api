@@ -18,3 +18,4 @@ basic_auth.py
 data/
 pgloader_stripped/
 ersatzpg/
+*.db

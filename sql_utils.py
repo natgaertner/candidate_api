@@ -88,7 +88,7 @@ def update_state(state_name, connection):
     ufields = ','.join('{u}=candidates_import_{state_name}.{u}'.format(u=u,state_name=state_name) for u in ufields)
     cfields = OrderedDict(settings.CANDIDATE_FIELDS)
     cfields.pop('updated')
-    cfields = ' or '.join('candidates_{state_name}.{u} != candidates_import_{state_name}.{u}'.format(u=u,state_name=state_name) for u in cfields)
+    cfields = ' or '.join('candidates_{state_name}.{u} IS DISTINCT FROM candidates_import_{state_name}.{u}'.format(u=u,state_name=state_name) for u in cfields)
     update = 'update candidates_{state_name} set {ufields} from candidates_import_{state_name} where candidates_{state_name}.uid = candidates_import_{state_name}.uid and ({conditions});'.format(ufields=ufields,state_name=state_name,conditions=cfields)
     insert = 'insert into candidates_{state_name}({fields}) select {fields} from candidates_import_{state_name} where candidates_import_{state_name}.uid not in (select uid from candidates_{state_name});'.format(state_name=state_name,fields=','.join(settings.CANDIDATE_FIELDS.keys()))
     print update
