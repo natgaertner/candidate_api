@@ -1,19 +1,20 @@
 from flask import Flask
-import json, os, re, hashlib,datetime
+import json, os, re, hashlib,datetime, gdbm, random
 from collections import defaultdict
 from flask import request, session, redirect,url_for, render_template
 from flaskext.autoindex import AutoIndex
 from sql_utils import query_candidates, test_database, build_database, query_bip, query_merged_bip
 import basic_auth
+import pwsettings
 import psycopg2 as psycopg
 from psycopg2.extensions import QuotedString
 app = Flask(__name__)
 ai = AutoIndex(app, browse_root='/home/gaertner/Dropbox/BIP Production')
-app.secret_key = '\xe9\x83\x88v\x97\x16\xe1\x06r\xa3+\xd0W\xfb\xea\xa4L\x06LW\xe0\xca\xff\x8a'
+app.secret_key = pwsettings.secret_key
 
 query_params = ['state','office_level','electoral_district','office_name','candidate_name','candidate_party','updated']
 
-connstr = "dbname=users user=postgres password=n/o.n,e"
+connstr = "dbname=users user=postgres password="+pwsettings.password
 connection = psycopg.connect(connstr)
 
 @app.route('/isloggedin')
@@ -219,9 +220,11 @@ def get_candidates():
     return json.dumps(results)
 
 bip_query_params = {
-        'candidate':('filed_mailing_address','election_key','name','phone','mailing_address','facebook_url','youtube','email','candidate_url','source','google_plus_url','twitter_name','incumbent','party','wiki_word','biography','photo_url',),
-        'contest':('number_voting_for','election_key','office','filing_closed_date','type','electoral_district_type','number_elected','custom_ballot_heading','contest_type','electorate_specifications','write_in','source','state','electoral_district_name','ballot_placement','partisan','primary_party','special',),
-        'electoral_district':('election_key','name','number','source','state_id','type'),
+        'candidate':('filed_mailing_address','election_key','name','phone','mailing_address','facebook_url','youtube','email','candidate_url','source','google_plus_url','twitter_name','incumbent','party','wiki_word','biography','photo_url','identifier','updated',),
+        'contest':('number_voting_for','election_key','office','filing_closed_date','type','electoral_district_type','number_elected','custom_ballot_heading','contest_type','electorate_specifications','write_in','source','state','electoral_district_name','ballot_placement','partisan','primary_party','special','identifier','updated',),
+        'electoral_district':('election_key','name','number','source','state_id','type','identifier','updated',),
+        'referendum':("id","source","title","subtitle","brief","text","pro_statement","con_statement","contest_id","passage_threshold","effect_of_abstain","election_key","updated","identifier"),
+        'ballot_response':("id","source","referendum_id","sort_order","text","election_key","updated","identifier"),
         }
 
 @app.route('/bip/<path:table>', methods=['GET', 'POST'])
@@ -266,6 +269,48 @@ def ordinal_suffix(day):
     else:
         suffix = ["st","nd","rd"][day % 10 -1]
     return str(day)+suffix
+
+words = gdbm.open('/home/gaertner/code/candidateview/words.db')
+rhymes = gdbm.open('/home/gaertner/code/candidateview/rhymes.db')
+
+def get_rhyme(word):
+    word = word.upper()
+    try:
+        key, syllables = words[word].split()
+    except:
+        return word.lower()
+    rhyme_words = [(rhyme,words[rhyme].split()[1]) for rhyme in rhymes[key].split()]
+    rhyme_words = [rw[0] for rw in rhyme_words if rw[1] == syllables]
+    if word in rhyme_words:
+        rhyme_words.pop(rhyme_words.index(word))
+    if len(rhyme_words) > 0:
+        random.shuffle(rhyme_words)
+        return rhyme_words[0].lower()
+    return word.lower()
+
+@app.route('/pun', methods=['GET','POST'])
+def main():
+    if request.method == 'POST':
+        if len(request.data) > 0:
+            data = dict([(s.split('=')[0],s.split('=')[1]) for s in request.data.split('&')])
+        elif request.form.has_key('query'):
+            data = request.form
+        else:
+            return 500
+        query = data['query']
+        r_query = []
+        query = query.split()
+        lq = len(query)
+        num_rhymes = random.randint(1,lq)
+        print num_rhymes
+        idx = range(lq)
+        random.shuffle(idx)
+        for n in idx[:num_rhymes]:
+            query[n] = get_rhyme(query[n])
+
+        return redirect('https://www.google.com/search?q={query}'.format(query='+'.join(query)))
+    else:
+        return render_template('punsearch.html')
 
 if __name__ == "__main__":
     app.run()

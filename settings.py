@@ -73,7 +73,7 @@ CANDIDATE_FIELDS=OrderedDict([
     ('website','text'),
     ('email','varchar(100)'),
     ('facebook_url','text'),
-    ('twitter_name','varchar(20)'),
+    ('twitter_name','text'),
     ('google_plus','text'),
     ('wiki_word','varchar(100)'),
     ('youtube','text'),
