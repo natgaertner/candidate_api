@@ -9,3 +9,9 @@ candidate_files
 adb.py
 tablesorter/
 pwsettings.py
+*.json
+*.bkp
+*.csv
+data/
+ersatzpg
+experiments/

@@ -23,7 +23,7 @@ $(document).ready(function(){
 		//console.log(candidate_party);
 		var p = {state : state, office_level : office_level, electoral_district : electoral_district, office_name : office_name, candidate_name : candidate_name, candidate_party : candidate_party}
 		$.ajax({
-			url: "https://50.116.48.233/api/candidates",
+			url: "/list/api",
 			data: p,
 			contentType: "application/json",
 			dataType: "json",

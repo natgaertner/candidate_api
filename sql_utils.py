@@ -54,7 +54,7 @@ def test_database():
     return build_database()
 
 def copy_state(state_name, state, connection):
-    settings.ERSATZPG_CONFIG['tables']['candidates_import'].update({'filename':state,'table':'candidates_import_{0}'.format(state_name.lower())})
+    settings.ERSATZPG_CONFIG['tables']['candidates_import'].update({'fileident':state,'table':'candidates_import_{0}'.format(state_name.lower())})
     ersatz.new_process_copies(settings, connection)
 
 bip_tables = ['candidate','contest','candidate_in_contest','electoral_district']
@@ -73,7 +73,7 @@ def copy_bip_tables(state_name, bip_dir, connection):
         table = dict(settings.CANDIDATE_TABLE)
         table['table'] = '{bt}_import_{state}'.format(bt=bt,state=state_name.lower())
         table['columns'] = dict(head)
-        table['filename'] = table_file
+        table['fileident'] = table_file
         dum_set.ERSATZPG_CONFIG['tables'].update({table['table']:table})
     ersatz.new_process_copies(dum_set, connection)
 
@@ -88,7 +88,7 @@ def update_state(state_name, connection):
     ufields = ','.join('{u}=candidates_import_{state_name}.{u}'.format(u=u,state_name=state_name) for u in ufields)
     cfields = OrderedDict(settings.CANDIDATE_FIELDS)
     cfields.pop('updated')
-    cfields = ' or '.join('candidates_{state_name}.{u} != candidates_import_{state_name}.{u}'.format(u=u,state_name=state_name) for u in cfields)
+    cfields = ' or '.join('candidates_{state_name}.{u} IS DISTINCT FROM candidates_import_{state_name}.{u}'.format(u=u,state_name=state_name) for u in cfields)
     update = 'update candidates_{state_name} set {ufields} from candidates_import_{state_name} where candidates_{state_name}.uid = candidates_import_{state_name}.uid and ({conditions});'.format(ufields=ufields,state_name=state_name,conditions=cfields)
     insert = 'insert into candidates_{state_name}({fields}) select {fields} from candidates_import_{state_name} where candidates_import_{state_name}.uid not in (select uid from candidates_{state_name});'.format(state_name=state_name,fields=','.join(settings.CANDIDATE_FIELDS.keys()))
     print update
@@ -205,19 +205,66 @@ def query_merged_bip(query_fields):
     cur.execute(sql)
     return cur.fetchall()
 
-def dump_json():
+def convert_date_sql(k,v,table=None):
+    if v == 'timestamp':
+        return "to_char({table}{k}, 'YYYY-MM-DD HH24:MI:SS') as {k}".format(k=k,table=(table+'.' if table else ''))
+    elif v == 'date':
+        return "to_char({table}{k}, 'YYYY-MM-DD') as {k}".format(k=k,table=(table+'.' if table else ''))
+    else:
+        return "{table}{k}".format(k=k,table=(table+'.' if table else ''))
+
+def dump_json(nulls=False):
     connection = db_connect(settings.BIP_DATABASE_CONF)
     cur = connection.cursor(cursor_factory=psyex.RealDictCursor)
-    for table in ['candidate','contest','candidate_in_contest','electoral_district']:
-        fields = OrderedDict(settings.__dict__['BIP_{table}_FIELDS'.format(table=table.upper())])
-        fields = ','.join((k if not v=='timestamp' else "to_char({k}, 'YYYY-MM-DD HH24:MI:SS') as {k}".format(k=k)) for k,v in fields.iteritems())
-        sql = 'SELECT {fields} from {table};'.format(fields=fields,table=table) 
+    for table in ['candidate','contest','candidate_in_contest','electoral_district','referendum','ballot_response','election']:
+        sql = build_sql(table)
         print sql
         cur.execute(sql)
-        with open(table+'.json','w') as f:
-            f.write(json.dumps(cur.fetchall()))
+        write_json(cur.fetchall(),table+'.json',nulls)
+
+def write_json(resultset,fileident,nulls=False):
+    with open(fileident,'w') as f:
+        if nulls:
+            f.write(json.dumps(resultset))
+        else:
+            f.write(json.dumps(map(lambda d: dict((k,v) for k,v in d.iteritems() if v != None),resultset)))
 
 
+def build_sql(table, joins=[], dependencies={}):
+    fields = OrderedDict(settings.__dict__['BIP_{table}_FIELDS'.format(table=table.upper())])
+    fields = ','.join(convert_date_sql(k,v,table) for k,v in fields.iteritems())
+    join_sql = ' '.join('join {ftable} on {table}.{local_key}={ftable}.{foreign_key}'.format(ftable=ftable,table=(ltable or table),local_key=local_key,foreign_key=foreign_key) for ltable,ftable,local_key,foreign_key in joins)
+    dependency_sql = ('where ' if len(dependencies) > 0 else '') + ' and '.join('{ftable}.{fkey}={filterval}'.format(ftable=ftable,fkey=fkey,filterval=psycopg.extensions.QuotedString(str(filterval)).getquoted()) for ftable,fkey,filterval in dependencies)
+    return 'SELECT {fields} from {table} '.format(fields=fields,table=table) + join_sql + ' ' + dependency_sql + ';'
+
+def dump_json_election_split(nulls=False):
+    #THANKS A LOT, GOOGLE
+    connection = db_connect(settings.BIP_DATABASE_CONF)
+    cur = connection.cursor(cursor_factory=psyex.RealDictCursor)
+    ['candidate','contest','candidate_in_contest','electoral_district','referendum','ballot_response','election']
+    cur.execute('SELECT id,identifier from election group by id,identifier;')
+    elections = ((row['id'],row['identifier']) for row in cur.fetchall())
+    election_sql = build_sql('election')
+    cur.execute(election_sql)
+    write_json(cur.fetchall(),'elections.json')
+    for eid,eident in elections:
+        candidate_sql = build_sql('candidate',[(None,'candidate_in_contest','id','candidate_id'),('candidate_in_contest','contest','contest_id','id'),('contest','election','election_id','id')],[('election','id',eid)])
+        contest_sql = build_sql('contest',[(None,'election','election_id','id')],[('election','id',eid)])
+        candidate_in_contest_sql = build_sql('candidate_in_contest',[(None,'contest','contest_id','id'),('contest','election','election_id','id')],[('election','id',eid)])
+        electoral_district_sql = build_sql('electoral_district',[(None,'contest','id','electoral_district_id'),('contest','election','election_id','id')],[('election','id',eid)])
+        print candidate_sql
+        print contest_sql
+        print candidate_in_contest_sql
+        print electoral_district_sql
+        cur.execute(candidate_sql)
+        write_json(cur.fetchall(),'candidate_elec_{eident}.json'.format(eident=eident),nulls)
+        cur.execute(contest_sql)
+        write_json(cur.fetchall(),'contest_elec_{eident}.json'.format(eident=eident),nulls)
+        cur.execute(candidate_in_contest_sql)
+        write_json(cur.fetchall(),'candidate_in_contest_elec_{eident}.json'.format(eident=eident),nulls)
+        cur.execute(electoral_district_sql)
+        write_json(cur.fetchall(),'electoral_district_elec_{eident}.json'.format(eident=eident),nulls)
+    
 if __name__=='__main__':
     if 'drop' in sys.argv:
         print drop_database()
@@ -227,3 +274,5 @@ if __name__=='__main__':
         build_database()
     if 'json' in sys.argv:
         dump_json()
+    if 'ejson' in sys.argv:
+        dump_json_election_split()

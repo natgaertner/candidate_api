@@ -8,9 +8,9 @@ DATABASE_CONF={
     'pw':pwsettings.password,
     }
 BIP_DATABASE_CONF={
-    'db':'bip',
+    'db':'bip_dump',
     'user':'postgres',
-    'pw':'n/o.n,e'
+    'pw':pwsettings.password,
     }
 TESTONLY = False
 STATE_FIELD = 'state'
@@ -66,7 +66,7 @@ CANDIDATE_FIELDS=OrderedDict([
     ('office_name','text'),
     ('candidate_name','varchar(200)'),
     ('candidate_party','varchar(50)'),
-    ('completed','bool'),
+    ('completed','varchar(50)'),
     ('incumbent','bool'),
     ('phone','varchar(100)'),
     ('mailing_address','varchar(255)'),
@@ -80,12 +80,38 @@ CANDIDATE_FIELDS=OrderedDict([
     ('updated','timestamp'),
     ])
 
+REFERENDUM_FIELDS = OrderedDict([
+    ("id", 'int4'),
+    ("source", 'text'),
+    ("title", 'text'),
+    ("subtitle", 'text'),
+    ("brief", 'text'),
+    ("text", 'varchar(255)'),
+    ("pro_statement", 'varchar(255)'),
+    ("con_statement", 'varchar(255)'),
+    ("contest_id", 'int4'),
+    ("passage_threshold", 'varchar(255)'),
+    ("effect_of_abstain", 'varchar(255)'),
+    ("election_key", 'int4'),
+    ("updated", 'timestamp'),
+    ("identifier", 'text'),])
+
+BALLOT_RESPONSE_FIELDS = OrderedDict([
+    ("id", 'int4'),
+    ("source", 'text'),
+    ("referendum_id", 'int4'),
+    ("sort_order", 'varchar(255)'),
+    ("text", 'text'),
+    ("election_key", 'int4'),
+    ("updated", 'timestamp'),
+    ("identifier", 'text'),])
+
 BIP_CANDIDATE_FIELDS=OrderedDict([
     ('id', 'int4'), ('source', 'text'), ('name', 'varchar(255)'), ('party', 'varchar(255)'), ('candidate_url', 'varchar(255)'), ('biography', 'varchar(255)'), ('phone', 'varchar(255)'), ('photo_url', 'varchar(255)'), ('filed_mailing_address', 'int4'), ('mailing_address', 'text'), ('email', 'varchar(255)'), ('incumbent', 'bool'), ('google_plus_url', 'varchar(255)'), ('twitter_name', 'varchar(255)'), ('facebook_url', 'varchar(255)'), ('wiki_word', 'varchar(255)'), ('youtube', 'text'), ('election_key', 'int4'), ('identifier', 'text'), ('updated','timestamp'),
     ])
 
 BIP_CONTEST_FIELDS = OrderedDict([
-    ('id', 'int4'), ('source', 'text'), ('election_id', 'int4'), ('electoral_district_id', 'int4'), ('electoral_district_name', 'varchar(255)'), ('electoral_district_type', 'varchar(255)'), ('partisan', 'bool'), ('type', 'varchar(255)'), ('primary_party', 'varchar(255)'), ('electorate_specifications', 'varchar(255)'), ('special', 'bool'), ('office', 'varchar(255)'), ('filing_closed_date', 'date'), ('number_elected', 'int4'), ('number_voting_for', 'int4'), ('ballot_placement', 'varchar(255)'), ('contest_type', 'contestenum'), ('write_in', 'bool'), ('custom_ballot_heading', 'text'), ('election_key', 'int4'), ('state', 'varchar(5)'), ('identifier', 'text'), ('updated','timestamp'),
+    ('id', 'int4'), ('source', 'text'), ('election_id', 'int4'), ('electoral_district_id', 'int4'), ('electoral_district_name', 'varchar(255)'), ('electoral_district_type', 'varchar(255)'), ('partisan', 'bool'), ('type', 'varchar(255)'), ('primary_party', 'varchar(255)'), ('electorate_specifications', 'varchar(255)'), ('special', 'bool'), ('office', 'varchar(255)'), ('filing_closed_date', 'date'), ('number_elected', 'int4'), ('number_voting_for', 'int4'), ('ballot_placement', 'varchar(255)'), ('contest_type', 'contestenum'), ('write_in', 'bool'), ('custom_ballot_heading', 'text'), ('election_key', 'int4'), ('state', 'varchar(5)'), ('identifier', 'text'), ('updated','timestamp'),('office_level','varchar(255)'),('ed_matched','bool'),
     ])
 
 BIP_CANDIDATE_IN_CONTEST_FIELDS = OrderedDict([
@@ -95,3 +121,49 @@ BIP_CANDIDATE_IN_CONTEST_FIELDS = OrderedDict([
 BIP_ELECTORAL_DISTRICT_FIELDS = OrderedDict([
     ('id', 'int4'), ('source', 'text'), ('name', 'varchar(255)'), ('type', 'varchar(255)'), ('number', 'int4'), ('state_id', 'int4'), ('election_key', 'int4'), ('identifier', 'text'), ('updated','timestamp'),
     ])
+BIP_REFERENDUM_FIELDS = OrderedDict([
+    ("id", 'int4'),
+    ("source", 'text'),
+    ("title", 'text'),
+    ("subtitle", 'text'),
+    ("brief", 'text'),
+    ("text", 'varchar(255)'),
+    ("pro_statement", 'varchar(255)'),
+    ("con_statement", 'varchar(255)'),
+    ("contest_id", 'int4'),
+    ("passage_threshold", 'varchar(255)'),
+    ("effect_of_abstain", 'varchar(255)'),
+    ("election_key", 'int4'),
+    ("updated", 'timestamp'),
+    ("identifier", 'text'),])
+
+BIP_BALLOT_RESPONSE_FIELDS = OrderedDict([
+    ("id", 'int4'),
+    ("source", 'text'),
+    ("referendum_id", 'int4'),
+    ("sort_order", 'varchar(255)'),
+    ("text", 'text'),
+    ("election_key", 'int4'),
+    ("updated", 'timestamp'),
+    ("identifier", 'text'),])
+
+BIP_ELECTION_FIELDS = OrderedDict([
+("id", 'int4'),
+("source", 'text'),
+("date", 'date'),
+("election_type", 'electionenum'),
+("state_id", 'int4'),
+("statewide", 'bool'),
+("is_special", 'bool'),
+("name", 'text'),
+("registration_info", 'varchar(255)'),
+("absentee_ballot_info", 'varchar(255)'),
+("results_url", 'varchar(255)'),
+("polling_hours", 'varchar(255)'),
+("election_day_registration", 'bool'),
+("registration_deadline", 'varchar(255)'),
+("absentee_request_deadline", 'varchar(255)'),
+("election_key", 'int4'),
+("identifier", 'text'),
+("updated", 'timestamp'),
+])
